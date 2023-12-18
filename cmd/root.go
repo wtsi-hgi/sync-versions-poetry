@@ -17,12 +17,25 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package main
+package cmd
 
 import (
-	"github.com/wtsi-hgi/sync-versions-poetry/cmd"
+	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
 )
 
-func main() {
-	cmd.Execute()
+var rootCmd = &cobra.Command{
+	Use: "sync-versions-poetry",
+	Run: func(cmd *cobra.Command, args []string) {
+		// TODO
+	},
+}
+
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
