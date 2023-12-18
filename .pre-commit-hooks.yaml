@@ -1,0 +1,6 @@
+- id: sync-versions-poetry
+  name: additional_dependencies from Poetry
+  entry: sync-versions
+  language: golang
+  always_run: true
+  pass_filenames: false
