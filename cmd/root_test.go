@@ -24,7 +24,7 @@ import (
 	"testing"
 )
 
-// When a .pre-commit-config.yaml is present, the root command should succeed.
+// When a .pre-commit-config.yaml and poetry.lock are present, the root command should succeed.
 func TestExecute(t *testing.T) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -39,6 +39,9 @@ func TestExecute(t *testing.T) {
 		}
 	}(cwd)
 	if err := os.WriteFile(".pre-commit-config.yaml", []byte{}, 0666); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile("poetry.lock", []byte{}, 0666); err != nil {
 		t.Fatal(err)
 	}
 	if err := rootCmd.Execute(); err != nil {

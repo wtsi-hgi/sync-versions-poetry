@@ -40,7 +40,11 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
-		_ = data
+		lockfile, err := loadPoetryLock(os.DirFS("."))
+		if err != nil {
+			panic(err)
+		}
+		_ = lockfile
 	},
 }
 
