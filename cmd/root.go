@@ -24,6 +24,7 @@ import (
 	"io/fs"
 	"os"
 
+	"github.com/pelletier/go-toml"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -68,5 +69,25 @@ type preCommitConfig struct {
 // Parse the contents of a .pre-commit-config.yaml.
 func loadPreCommitConfig(data []byte) (config preCommitConfig, err error) {
 	err = yaml.Unmarshal(data, &config)
+	return
+}
+
+type poetryLock struct {
+	Metadata struct {
+		LockVersion string `toml:"lock-version"`
+	}
+	Package []struct {
+		Name    string
+		Version string
+	}
+}
+
+// Read and parse poetry.lock.
+func loadPoetryLock(fsys fs.FS) (lockfile poetryLock, err error) {
+	data, err := fs.ReadFile(fsys, "poetry.lock")
+	if err != nil {
+		return
+	}
+	err = toml.Unmarshal(data, &lockfile)
 	return
 }

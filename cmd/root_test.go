@@ -82,3 +82,14 @@ repos:
 		t.Error("wrong deps:", additionalDeps)
 	}
 }
+
+// When passed a valid poetry.lock, loadPoetryLock() should succeed.
+func TestLoadPoetryLock(t *testing.T) {
+	lockfile, err := loadPoetryLock(os.DirFS("testdata"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if lockfile.Metadata.LockVersion != "2.0" {
+		t.Error("wrong lock-version:", lockfile.Metadata.LockVersion)
+	}
+}
