@@ -21,6 +21,7 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -39,6 +40,12 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+// Read the .pre-commit-config.yaml file and return its contents.
+func readPreCommitFile(fsys fs.FS) (file []byte, err error) {
+	file, err = fs.ReadFile(fsys, ".pre-commit-config.yaml")
+	return
 }
 
 type preCommitConfig struct {

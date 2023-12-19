@@ -19,13 +19,25 @@
 
 package cmd
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 // The root command should succeed.
 func TestExecute(t *testing.T) {
 	err := rootCmd.Execute()
 	if err != nil {
 		t.Fail()
+	}
+}
+
+// When run in a directory with a .pre-commit-config.yaml,
+// readPreCommitFile() should succeed.
+func TestReadPreCommitFile(t *testing.T) {
+	_, err := readPreCommitFile(os.DirFS("testdata"))
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
