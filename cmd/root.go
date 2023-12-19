@@ -24,6 +24,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 var rootCmd = &cobra.Command{
@@ -38,4 +39,19 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+type preCommitConfig struct {
+	Repos []struct {
+		Hooks []struct {
+			Id                     string
+			AdditionalDependencies []string `yaml:"additional_dependencies"`
+		}
+	}
+}
+
+// Parse the contents of a .pre-commit-config.yaml.
+func loadPreCommitConfig(data []byte) (config preCommitConfig, err error) {
+	err = yaml.Unmarshal(data, &config)
+	return
 }

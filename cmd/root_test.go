@@ -28,3 +28,24 @@ func TestExecute(t *testing.T) {
 		t.Fail()
 	}
 }
+
+// When passed a valid pre-commit file, loadPreCommitConfig() should succeed.
+func TestLoadPreCommitConfig(t *testing.T) {
+	config, err := loadPreCommitConfig([]byte(`
+repos:
+- hooks:
+  - id: foo
+    additional_dependencies: [a, b, c]
+`))
+	if err != nil {
+		t.Error(err)
+	}
+	var id = config.Repos[0].Hooks[0].Id
+	if id != "foo" {
+		t.Error("wrong name:", id)
+	}
+	var additionalDeps = config.Repos[0].Hooks[0].AdditionalDependencies
+	if len(additionalDeps) != 3 {
+		t.Error("wrong deps:", additionalDeps)
+	}
+}
