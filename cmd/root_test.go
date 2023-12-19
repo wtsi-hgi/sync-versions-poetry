@@ -24,12 +24,33 @@ import (
 	"testing"
 )
 
-// The root command should succeed.
+// When a .pre-commit-config.yaml is present, the root command should succeed.
 func TestExecute(t *testing.T) {
-	err := rootCmd.Execute()
+	cwd, err := os.Getwd()
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
+	defer func(dir string) {
+		if err := os.Chdir(dir); err != nil {
+			t.Fatal(err)
+		}
+	}(cwd)
+	if err := os.WriteFile(".pre-commit-config.yaml", []byte{}, 0666); err != nil {
+		t.Fatal(err)
+	}
+	if err := rootCmd.Execute(); err != nil {
 		t.Fail()
 	}
+}
+
+// When a .pre-commit-config.yaml is absent, the root command should fail.
+func TestExecuteMissingConfig(t *testing.T) {
+	defer func() { _ = recover() }()
+	_ = rootCmd.Execute()
+	t.Fatal("did not panic")
 }
 
 // When run in a directory with a .pre-commit-config.yaml,

@@ -31,7 +31,15 @@ import (
 var rootCmd = &cobra.Command{
 	Use: "sync-versions-poetry",
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO
+		file, err := readPreCommitFile(os.DirFS("."))
+		if err != nil {
+			panic(err)
+		}
+		data, err := loadPreCommitConfig(file)
+		if err != nil {
+			panic(err)
+		}
+		_ = data
 	},
 }
 
