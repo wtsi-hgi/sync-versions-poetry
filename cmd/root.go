@@ -48,7 +48,12 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
-		_ = lockfile
+		if problems := checkVersions(data, lockfile, args); len(problems) > 0 {
+			for _, problem := range problems {
+				fmt.Println(problem)
+			}
+			os.Exit(1)
+		}
 	},
 }
 
