@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"slices"
 
 	"github.com/pelletier/go-toml"
 	"github.com/spf13/cobra"
@@ -93,5 +94,26 @@ func loadPoetryLock(fsys fs.FS) (lockfile poetryLock, err error) {
 		return
 	}
 	err = toml.Unmarshal(data, &lockfile)
+	return
+}
+
+// Check the versions of additional_dependencies in a pre-commit config against those in a poetry.lock.
+// Only hooks with the specified `hookIds` will be checked.
+//
+// For each dependency in additional_dependencies, the following checks are made:
+// - the dependency specifier must be in the format "package-name==exact.version"
+// - the package name in the dependency specifier must be in the lockfile
+// - the version in the dependency specifier must match the lockfile
+func checkVersions(config preCommitConfig, lockfile poetryLock, hookIds []string) (problems []string) {
+	for _, repo := range config.Repos {
+		for _, hook := range repo.Hooks {
+			if slices.Contains(hookIds, hook.Id) {
+				for _, depspec := range hook.AdditionalDependencies {
+					// TODO
+					_ = depspec
+				}
+			}
+		}
+	}
 	return
 }

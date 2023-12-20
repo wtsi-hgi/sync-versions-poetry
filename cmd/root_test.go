@@ -20,6 +20,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"testing"
 )
@@ -94,5 +95,31 @@ func TestLoadPoetryLock(t *testing.T) {
 	}
 	if lockfile.Metadata.LockVersion != "2.0" {
 		t.Error("wrong lock-version:", lockfile.Metadata.LockVersion)
+	}
+}
+
+// When passed no hooks, or a hook with no additional_dependencies, checkVersions() should succeed.
+func TestCheckVersionsSimple(t *testing.T) {
+	tests := []struct {
+		hooks []string
+	}{
+		{[]string{}},
+		{[]string{"golangci-lint"}},
+	}
+	file, err := readPreCommitFile(os.DirFS("testdata"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	config, err := loadPreCommitConfig(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range tests {
+		t.Run(fmt.Sprintf("%v", test.hooks), func(t *testing.T) {
+			problems := checkVersions(config, poetryLock{}, test.hooks)
+			if len(problems) != 0 {
+				t.Error("unexpected problems", problems)
+			}
+		})
 	}
 }
