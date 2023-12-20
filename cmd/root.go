@@ -48,6 +48,9 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
+		if len(args) == 0 {
+			args = []string{"black", "flake8", "isort", "mypy"}
+		}
 		if problems := checkVersions(data, lockfile, args); len(problems) > 0 {
 			for _, problem := range problems {
 				fmt.Println(problem)
