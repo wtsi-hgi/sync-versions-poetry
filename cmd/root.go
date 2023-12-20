@@ -23,8 +23,11 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"regexp"
 	"slices"
+	"strings"
 
+	"github.com/aquasecurity/go-pep440-version"
 	"github.com/pelletier/go-toml"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -109,11 +112,77 @@ func checkVersions(config preCommitConfig, lockfile poetryLock, hookIds []string
 		for _, hook := range repo.Hooks {
 			if slices.Contains(hookIds, hook.Id) {
 				for _, depspec := range hook.AdditionalDependencies {
-					// TODO
-					_ = depspec
+					if problem := checkVersion(depspec, lockfile); problem != "" {
+						problems = append(problems, fmt.Sprintf("%v: %v", depspec, problem))
+					}
 				}
 			}
 		}
 	}
 	return
+}
+
+// See PEP 508.
+const identifierPat = `[a-zA-Z0-9](?:[-_.]*[a-zA-Z0-9])*`
+const namePat = identifierPat
+
+var extrasPat = fmt.Sprint(`\[\s*(?:`, identifierPat, `(?:\s*,\s*`, identifierPat, `)*)?\s*\]`)
+var versionOnePat = `\s*(?:<|<=|!=|==|>=|>|~=|===)\s*(?:[a-zA-Z0-9]|[-_.*+!])+\s*`
+var versionManyPat = fmt.Sprint(versionOnePat, `(?:\s*,`, versionOnePat, `)*`)
+var versionspecPat = fmt.Sprint(`\(`, versionManyPat, `\)|`, versionManyPat)
+
+var pat = regexp.MustCompile(fmt.Sprint(`^(`, namePat, `)\s*(?:`, extrasPat, `)?\s*(`, versionspecPat, `)?$`))
+
+func checkVersion(depspec string, lockfile poetryLock) (problem string) {
+	// Strictly speaking, the grammar of entries in additional_dependencies is defined by PEP 508; PEP 440 specifies
+	// only the version constraints. However, in practice, it's easy enough to parse a minimal subset of PEP 508
+	// specifiers given an existing PEP 440 parser. To simplify things, we reject specifiers with environment markers
+	// (any string containing ";"). The other major problem is URLs (PEP 508 "urlspec"s) – we reject these too.
+	depspec = strings.TrimSpace(depspec)
+	if idx := strings.IndexAny(depspec, ";@"); idx != -1 {
+		// since URLs can contain `;` and environment markers can contain `@`, we need to disambiguate
+		if depspec[idx] == ';' {
+			return "environment markers not permitted"
+		} else {
+			return "URLs not permitted"
+		}
+	}
+	matches := pat.FindStringSubmatch(depspec)
+	if matches == nil {
+		return "invalid dependency specification"
+	}
+	lockedPackages := make(map[string]string)
+	for _, pkg := range lockfile.Package {
+		// TODO: normalise package names everywhere
+		lockedPackages[pkg.Name] = pkg.Version
+	}
+	name, rawVersion := matches[1], matches[2]
+	if rawVersion == "" {
+		return "empty version spec not permitted"
+	}
+	versionSpec, err := version.NewSpecifiers(rawVersion)
+	if err != nil {
+		return "invalid version specification"
+	}
+	rawLockedVersion, ok := lockedPackages[name]
+	if !ok {
+		return "not found in poetry.lock"
+	}
+	lockedVersion, err := version.Parse(rawLockedVersion)
+	if err != nil {
+		panic(fmt.Sprintf("failed to parse version from poetry.lock: %q %q", name, rawLockedVersion))
+	}
+	if !versionSpec.Check(lockedVersion) {
+		return fmt.Sprintf("version mismatch (expected: %v)", lockedVersion)
+	}
+	if strings.Contains(rawVersion, ".*") {
+		return "trailing .* not permitted"
+	}
+	if !strings.Contains(rawVersion, "==") {
+		return fmt.Sprintf("must specify an exact version (expected: %v==%v)", name, lockedVersion)
+	}
+	if strings.Contains(rawVersion, "===") {
+		return fmt.Sprintf("arbitrary equality (===) not permitted (expected: %v==%v)", name, lockedVersion)
+	}
+	return ""
 }

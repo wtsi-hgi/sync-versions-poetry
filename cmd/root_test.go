@@ -22,6 +22,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"slices"
 	"testing"
 )
 
@@ -119,6 +120,71 @@ func TestCheckVersionsSimple(t *testing.T) {
 			problems := checkVersions(config, poetryLock{}, test.hooks)
 			if len(problems) != 0 {
 				t.Error("unexpected problems", problems)
+			}
+		})
+	}
+}
+
+// When passed a hook with problems, checkVersions() should return the problems detected.
+func TestCheckVersionsFailing(t *testing.T) {
+	file, err := readPreCommitFile(os.DirFS("testdata"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	config, err := loadPreCommitConfig(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lockfile, err := loadPoetryLock(os.DirFS("testdata"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	problems := checkVersions(config, lockfile, []string{"flake8"})
+	if !slices.Equal(problems, []string{"flake8-typing-imports==1.14.0: version mismatch (expected: 1.15.0)"}) {
+		t.Error("incorrect problems", problems)
+	}
+}
+
+// When passed a dependency, checkVersion() should return a problem when appropriate.
+func TestCheckVersion(t *testing.T) {
+	tests := []struct {
+		depspec string
+		problem string
+	}{
+		// Underspecified versions are not allowed
+		{"virtualenv", "empty version spec not permitted"},
+		{"virtualenv>=20.25,<21", "must specify an exact version (expected: virtualenv==20.25.0)"},
+		{"virtualenv===20.25.0", "arbitrary equality (===) not permitted (expected: virtualenv==20.25.0)"},
+		{"virtualenv==20.25.*", "trailing .* not permitted"},
+		// Only an exact version matching clause is allowed...
+		{"virtualenv==20.25.0", ""},
+		{"virtualenv==20.25", ""},
+		// ...and only as long as it matches what's in poetry.lock.
+		{"virtualenv==20.24.0", "version mismatch (expected: 20.25.0)"},
+		// URLs are not allowed (because they cannot be matched against poetry.lock)
+		{"virtualenv @ http://example.com#sha1=da39a3ee5e6b4b0d3255bfef95601890afd80709", "URLs not permitted"},
+		// Extras are OK
+		{"virtualenv[foo,bar]==20.25.*", "trailing .* not permitted"},
+		{"virtualenv[foo,bar]==20.25.0", ""},
+		// Environment markers are not allowed (because they make no sense with pre-commit, where you know the Python version being used)
+		// (also just because they're an enormous pain to parse)
+		{"virtualenv==20.25.0 ; python_version < \"3.14\"", "environment markers not permitted"},
+		{"virtualenv @ https://example.com#sha1=da39a3ee5e6b4b0d3255bfef95601890afd80709 ; python_version < \"3.14\"", "URLs not permitted"},
+		// Packages not in poetry.lock are not allowed
+		{"does-not-exist==1.2.3", "not found in poetry.lock"},
+		// Invalid dependency specifiers are not allowed
+		{"this is nonsense", "invalid dependency specification"},
+		{"different-nonsense==1..100", "invalid version specification"},
+	}
+	lockfile, err := loadPoetryLock(os.DirFS("testdata"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range tests {
+		t.Run(test.depspec, func(t *testing.T) {
+			problem := checkVersion(test.depspec, lockfile)
+			if problem != test.problem {
+				t.Errorf("got %q wanted %q", problem, test.problem)
 			}
 		})
 	}
