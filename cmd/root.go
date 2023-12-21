@@ -161,8 +161,7 @@ func checkVersion(depspec string, lockfile poetryLock) (problem string) {
 	}
 	lockedPackages := make(map[string]string)
 	for _, pkg := range lockfile.Package {
-		// TODO: normalise package names everywhere
-		lockedPackages[pkg.Name] = pkg.Version
+		lockedPackages[normalizeName(pkg.Name)] = pkg.Version
 	}
 	name, rawVersion := matches[1], matches[2]
 	if rawVersion == "" {
@@ -172,7 +171,7 @@ func checkVersion(depspec string, lockfile poetryLock) (problem string) {
 	if err != nil {
 		return "invalid version specification"
 	}
-	rawLockedVersion, ok := lockedPackages[name]
+	rawLockedVersion, ok := lockedPackages[normalizeName(name)]
 	if !ok {
 		return "not found in poetry.lock"
 	}
@@ -193,4 +192,13 @@ func checkVersion(depspec string, lockfile poetryLock) (problem string) {
 		return "trailing .* not permitted"
 	}
 	return ""
+}
+
+var normalizePat = regexp.MustCompile(`[-_.]+`)
+
+// normalizeName normalizes a Python package name by replacing runs of punctuation with "-" and lowercasing.
+//
+// See https://packaging.python.org/en/latest/specifications/name-normalization/ for details.
+func normalizeName(name string) string {
+	return strings.ToLower(normalizePat.ReplaceAllLiteralString(name, "-"))
 }

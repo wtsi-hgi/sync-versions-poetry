@@ -175,6 +175,9 @@ func TestCheckVersion(t *testing.T) {
 		// Invalid dependency specifiers are not allowed
 		{"this is nonsense", "invalid dependency specification"},
 		{"different-nonsense==1..100", "invalid version specification"},
+		// Package names are normalized
+		{"FLAKE8-DocStrings==1.7", ""},
+		{"flake8_typing.imports==1.15", ""},
 	}
 	lockfile, err := loadPoetryLock(os.DirFS("testdata"))
 	if err != nil {
@@ -185,6 +188,30 @@ func TestCheckVersion(t *testing.T) {
 			problem := checkVersion(test.depspec, lockfile)
 			if problem != test.problem {
 				t.Errorf("got %q wanted %q", problem, test.problem)
+			}
+		})
+	}
+}
+
+func TestNormalizeName(t *testing.T) {
+	tests := []struct {
+		in   string
+		want string
+	}{
+		// testcases from https://packaging.python.org/en/latest/specifications/name-normalization/
+		{"friendly-bard", "friendly-bard"},
+		{"Friendly-Bard", "friendly-bard"},
+		{"FRIENDLY-BARD", "friendly-bard"},
+		{"friendly.bard", "friendly-bard"},
+		{"friendly_bard", "friendly-bard"},
+		{"friendly--bard", "friendly-bard"},
+		{"FrIeNdLy-._.-bArD", "friendly-bard"},
+	}
+	for _, test := range tests {
+		t.Run(test.in, func(t *testing.T) {
+			got := normalizeName(test.in)
+			if got != test.want {
+				t.Errorf("got %q want %q", got, test.want)
 			}
 		})
 	}
