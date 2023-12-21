@@ -13,6 +13,9 @@ Add the following to your `.pre-commit-config.yaml`:
     - id: sync-versions-poetry
 ```
 
+By default, a preset list of hooks will be checked. If you want to check other hooks,
+pass `args` with their IDs (this will *overwrite* the preset list).
+
 ## License
 
 Copyright (c) 2023 Genome Research Ltd.
