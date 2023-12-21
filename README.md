@@ -2,6 +2,17 @@
 
 Keep pre-commit `additional_dependencies` in sync with dependencies pinned by Poetry.
 
+## Usage
+
+Add the following to your `.pre-commit-config.yaml`:
+
+```yaml
+- repo: https://github.com/wtsi-hgi/sync-versions-poetry
+  rev: v0.1
+  hooks:
+    - id: sync-versions-poetry
+```
+
 ## License
 
 Copyright (c) 2023 Genome Research Ltd.
