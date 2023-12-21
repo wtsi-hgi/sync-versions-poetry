@@ -183,14 +183,14 @@ func checkVersion(depspec string, lockfile poetryLock) (problem string) {
 	if !versionSpec.Check(lockedVersion) {
 		return fmt.Sprintf("version mismatch (expected: %v)", lockedVersion)
 	}
-	if strings.Contains(rawVersion, ".*") {
-		return "trailing .* not permitted"
-	}
 	if !strings.Contains(rawVersion, "==") {
 		return fmt.Sprintf("must specify an exact version (expected: %v==%v)", name, lockedVersion)
 	}
 	if strings.Contains(rawVersion, "===") {
 		return fmt.Sprintf("arbitrary equality (===) not permitted (expected: %v==%v)", name, lockedVersion)
+	}
+	if strings.Contains(rawVersion, ".*") {
+		return "trailing .* not permitted"
 	}
 	return ""
 }
